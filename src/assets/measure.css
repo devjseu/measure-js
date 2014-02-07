@@ -1,0 +1,351 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: Verdana, Arial;
+}
+button {
+  cursor: pointer;
+}
+.hidden {
+  display: none;
+}
+.visible {
+  display: inline-block;
+}
+.search.input {
+  display: inline-block;
+  width: 190px;
+  height: 25px;
+  background: #2C3E50;
+  border-radius: 3px;
+}
+.search.input input {
+  width: 109px;
+  height: 23px;
+  border: 0;
+  background: white;
+  margin: 0 0 0 1px;
+  padding: 0;
+}
+.search.input .icon {
+  width: 25px;
+  height: 23px;
+  border: 0;
+  background: transparent;
+  color: #1ABC9C;
+  cursor: default;
+}
+.search.input .modules {
+  font-size: 10px;
+  width: 55px;
+  height: 25px;
+  border: 0;
+  background: transparent;
+  color: #1ABC9C;
+}
+.search.input .modules:active {
+  background: #47637f;
+}
+.combobox {
+  display: inline-block;
+  width: 190px;
+  height: 25px;
+  background: #2C3E50;
+  border-radius: 3px;
+  position: relative;
+}
+.combobox input {
+  width: 160px;
+  height: 23px;
+  border: 0;
+  background: white;
+  margin: 1px 0 0 1px;
+  padding: 0;
+  border-radius: 3px 0 0 3px;
+  font-size: 10px;
+}
+.combobox .caret {
+  cursor: pointer;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  vertical-align: middle;
+  border-top: 4px solid;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+  border-style: solid;
+  border-bottom-style: none;
+  -webkit-transition: 0.25s;
+  transition: 0.25s;
+  -webkit-transform: scale(1.001);
+  -ms-transform: scale(1.001);
+  transform: scale(1.001);
+  border-width: 8px 6px 0;
+  margin-left: 8px;
+  border-top-color: #4b6075;
+  border-bottom-color: #4b6075;
+}
+.combobox .caret:hover {
+  border-top-color: #16a085;
+  border-bottom-color: #16a085;
+}
+.combobox .container {
+  top: 24px;
+  padding-top: 6px;
+  position: absolute;
+  z-index: 1;
+}
+.combobox .list {
+  background: white;
+  border-radius: 3px;
+  -ms-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  list-style: none;
+  font-size: 10px;
+  padding: 5px;
+  margin: 0;
+}
+.combobox .list li {
+  cursor: pointer;
+  padding: 2px;
+  color: #34495E;
+}
+.combobox .list li.hover {
+  background: #34495E;
+  color: white;
+}
+.panel {
+  position: relative;
+  background: #2C3E50;
+}
+.panel .bar {
+  background: #34495E;
+  min-height: 45px;
+  width: 100%;
+  position: relative;
+  margin-top: -1px;
+  padding-top: 1px;
+}
+#left-panel {
+  height: 100%;
+  width: 30%;
+}
+#left-panel .bar.top {
+  padding-bottom: 1px;
+  margin-bottom: -1px;
+}
+#left-panel .search.input,
+#left-panel .combobox {
+  display: block;
+  margin: 10px auto;
+  position: relative;
+  z-index: 1;
+}
+#left-panel .search.input:hover,
+#left-panel .combobox:hover {
+  transform: scale(1.2);
+  -webkit-transform: scale(1.2);
+}
+#left-panel .content {
+  overflow-y: scroll;
+}
+#left-panel .content .list {
+  width: 70%;
+  margin: 10px auto;
+  padding: 0px 15%;
+  list-style: none;
+  color: white;
+}
+#left-panel .content .list .element {
+  padding: 10px;
+  margin-bottom: 2px;
+  background-color: #34495E;
+  cursor: pointer;
+  font-size: 11px;
+  min-height: 20px;
+  border-radius: 3px;
+  -ms-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  overflow: hidden;
+}
+#left-panel .content .list .element table {
+  width: 100%;
+}
+#left-panel .content .list .element button {
+  float: right;
+  height: 20px;
+  font-size: 10px;
+  background: #1ABC9C;
+  border: 0;
+  color: white;
+  border-radius: 3px;
+  -ms-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  opacity: 0;
+}
+#left-panel .content .list .element button:hover {
+  background: #16A085;
+}
+#left-panel .content .list .element button:active {
+  background: #1ABC9C;
+}
+#left-panel .content .list .element:hover {
+  transform: scale(1.2);
+  -webkit-transform: scale(1.2);
+  color: #1ABC9C;
+  background-color: #2C3E50;
+}
+#left-panel .content .list .element:hover button {
+  opacity: 1;
+}
+.anim {
+  transition: all 1s;
+  -webkit-transition: all 1s;
+}
+.anim.slow {
+  transition: all 2s;
+  -webkit-transition: all 2s;
+}
+.anim.fast {
+  transition: all 0.5s;
+  -webkit-transition: all 0.5s;
+}
+@font-face {
+  font-family: 'Flat-UI-Icons';
+  src: url('fonts/Flat-UI-Icons.eot');
+  src: url('fonts/Flat-UI-Icons.eot?#iefix') format('embedded-opentype'), url('fonts/Flat-UI-Icons.woff') format('woff'), url('fonts/Flat-UI-Icons.ttf') format('truetype'), url('fonts/Flat-UI-Icons.svg#Flat-UI-Icons') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+.ui-arrow-right,
+.ui-arrow-left,
+.ui-cmd,
+.ui-check-inverted,
+.ui-heart,
+.ui-location,
+.ui-plus,
+.ui-check,
+.ui-cross,
+.ui-list,
+.ui-new,
+.ui-video,
+.ui-photo,
+.ui-volume,
+.ui-time,
+.ui-eye,
+.ui-chat,
+.ui-search,
+.ui-user,
+.ui-mail,
+.ui-lock,
+.ui-gear,
+.ui-radio-unchecked,
+.ui-radio-checked,
+.ui-checkbox-unchecked,
+.ui-checkbox-checked,
+.ui-calendar-solid,
+.ui-pause,
+.ui-play,
+.ui-check-inverted-2 {
+  display: inline-block;
+  font-family: 'Flat-UI-Icons';
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  -webkit-font-smoothing: antialiased;
+}
+.ui-arrow-right:before {
+  content: "\e02c";
+}
+.ui-arrow-left:before {
+  content: "\e02d";
+}
+.ui-cmd:before {
+  content: "\e02f";
+}
+.ui-check-inverted:before {
+  content: "\e06";
+}
+.ui-heart:before {
+  content: "\e007";
+}
+.ui-location:before {
+  content: "\e008";
+}
+.ui-plus:before {
+  content: "\e009";
+}
+.ui-check:before {
+  content: "\e00a";
+}
+.ui-cross:before {
+  content: "\e00b";
+}
+.ui-list:before {
+  content: "\e00c";
+}
+.ui-new:before {
+  content: "\e00d";
+}
+.ui-video:before {
+  content: "\e00e";
+}
+.ui-photo:before {
+  content: "\e00f";
+}
+.ui-volume:before {
+  content: "\e010";
+}
+.ui-time:before {
+  content: "\e011";
+}
+.ui-eye:before {
+  content: "\e012";
+}
+.ui-chat:before {
+  content: "\e013";
+}
+.ui-search:before {
+  content: "\e01c";
+}
+.ui-user:before {
+  content: "\e01d";
+}
+.ui-mail:before {
+  content: "\e01e";
+}
+.ui-lock:before {
+  content: "\e01f";
+}
+.ui-gear:before {
+  content: "\e024";
+}
+.ui-radio-unchecked:before {
+  content: "\e02b";
+}
+.ui-radio-checked:before {
+  content: "\e032";
+}
+.ui-checkbox-unchecked:before {
+  content: "\e033";
+}
+.ui-checkbox-checked:before {
+  content: "\e034";
+}
+.ui-calendar-solid:before {
+  content: "\e022";
+}
+.ui-pause:before {
+  content: "\e03b";
+}
+.ui-play:before {
+  content: "\e03c";
+}
+.ui-check-inverted-2:before {
+  content: "\e000";
+}

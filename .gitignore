@@ -1,0 +1,5 @@
+.idea
+.DS_Store
+node_modules
+assets/js/lib/jquery
+assets/js/lib/qunit
