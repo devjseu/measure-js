@@ -1,12 +1,12 @@
 (function (window, undefined) {
     "use strict";
 
-    var List, ListElement, Search, ComboBox, ComboBoxElement, Panel, locale;
+    var List, ListElement, Search, ComboBox, ComboBoxElement, Panel, locale, ui;
 
     if (typeof yamvc === 'undefined')
         throw new Error("Measure UI require yamvc library");
 
-    locale = new yamvc.Model({
+    locale = yamvc.Model.$create({
         config: {
             namespace: 'locale',
             data: {
@@ -425,7 +425,7 @@
     });
     //********** List Element definition end **********
 
-     //********** Panel definition **********
+    //********** Panel definition **********
     Panel = yamvc.View.$extend({
         defaults: {
             fit: true,
@@ -518,153 +518,120 @@
     });
     //********** Panel definition end **********
 
-    Panel.$create({
-        config: {
-            autoCreate: true,
-            topBar: true,
-            bottomBar: true,
-            id: 'left-panel',
-            width: '30%',
-            renderTo: 'body',
-            children: [
-                Search.$create({
-                    config: {
-                        id: 'search',
-                        renderTo: '.bar.top',
-                        models: [
-                            locale
-                        ]
-                    }
-                }),
-                ComboBox.$create({
-                    config: {
-                        hidden: true,
-                        id: 'module-list',
-                        renderTo: '.bar.top',
-                        models: [
-                            locale
-                        ],
-                        collection: new yamvc.Collection({
+
+
+    ui = {
+        views: {
+            panel: Panel.$create({
+                config: {
+                    autoCreate: true,
+                    topBar: true,
+                    bottomBar: true,
+                    id: 'left-panel',
+                    width: '30%',
+                    renderTo: 'body',
+                    children: [
+                        Search.$create({
                             config: {
-                                namespace: 'combobox',
-                                model: yamvc.Model,
-                                data: [
-                                    {
-                                        module: 'Adding DOM elements'
-                                    },
-                                    {
-                                        module: 'Adding DOM elements 2'
-                                    },
-                                    {
-                                        module: 'Change DOM element value'
-                                    },
-                                    {
-                                        module: 'Functions'
-                                    },
-                                    {
-                                        module: 'Localstorages'
-                                    }
+                                id: 'search',
+                                renderTo: '.bar.top',
+                                models: [
+                                    locale
                                 ]
                             }
-                        })
-                    }
-                }),
-                List.$create({
-                    config: {
-                        id: 'list',
-                        renderTo: '.content',
-                        collection: new yamvc.Collection({
+                        }),
+                        ComboBox.$create({
                             config: {
-                                namespace: 'list',
-                                model: yamvc.Model,
-                                data: [
-                                    {
-                                        module: 'Adding DOM elements',
-                                        name: 'Add html elements via innerHTML'
-                                    },
-                                    {
-                                        module: 'Adding DOM elements',
-                                        name: 'Add html elements via createElement'
-                                    },
-                                    {
-                                        module: 'Change DOM element value',
-                                        name: 'Change node value via data property'
-                                    },
-                                    {
-                                        module: 'Change DOM element value',
-                                        name: 'Change node value via nodeValue property'
-                                    },
-                                    {
-                                        module: 'Functions',
-                                        name: 'Test 2'
-                                    },
-                                    {
-                                        module: 'Functions',
-                                        name: 'Test 3'
-                                    },
-                                    {
-                                        module: 'Functions',
-                                        name: 'Test 1'
-                                    },
-                                    {
-                                        module: 'Localstorages',
-                                        name: 'Test 2'
-                                    },
-                                    {
-                                        module: 'Localstorages',
-                                        name: 'Test 3'
+                                hidden: true,
+                                id: 'module-list',
+                                renderTo: '.bar.top',
+                                models: [
+                                    locale
+                                ],
+                                collection: yamvc.Collection.$create({
+                                    config: {
+                                        namespace: 'combobox',
+                                        model: yamvc.Model
                                     }
-                                ]
+                                })
+                            }
+                        }),
+                        List.$create({
+                            config: {
+                                id: 'list',
+                                renderTo: '.content',
+                                collection: yamvc.Collection.$create({
+                                    config: {
+                                        namespace: 'list',
+                                        model: yamvc.Model
+                                    }
+                                })
                             }
                         })
-                    }
-                })
-            ]
-        }
-    });
+                    ]
+                }
+            })
+        },
+        controllers: {
+            main: yamvc.Controller.$create({
+                config: {
+                    name: 'Main',
+                    views: {
+                        panel: yamvc.ViewManager.get('left-panel')
+                    },
+                    events: {
+                        '.list .element button': {
+                            click: function () {
+                                alert('Compare!');
+                            }
+                        },
+                        '.search input': {
+                            keyup: function (view, e) {
+                                var list = yamvc.ViewManager.get('list'),
+                                    el = e.target || e.srcElement,
+                                    collection = list.getCollection();
 
-    yamvc.Controller.$create({
-        config: {
-            name: 'Main',
-            views: {
-                panel: yamvc.ViewManager.get('left-panel')
-            },
-            events: {
-                '.list .element button': {
-                    click: function () {
-                        alert('Compare!');
-                    }
-                },
-                '.search input': {
-                    keyup: function (view, e) {
-                        var list = yamvc.ViewManager.get('list'),
-                            el = e.target || e.srcElement,
-                            collection = list.getCollection();
+                                collection.suspendEvents();
+                                collection.clearFilter('name');
+                                collection.resumeEvents();
+                                collection.filter('name', function (r) {
+                                    if (r.data('name').search(el.value) > -1) return true;
+                                });
+                            }
+                        },
+                        '#module-list input': {
+                            keyup: function (view, e) {
+                                var list = yamvc.ViewManager.get('list'),
+                                    combobox = yamvc.ViewManager.get('module-list'),
+                                    el = e.target || e.srcElement,
+                                    collection = list.getCollection();
 
-                        collection.suspendEvents();
-                        collection.clearFilter('name');
-                        collection.resumeEvents();
-                        collection.filter('name', function (r) {
-                            if (r.data('name').search(el.value) > -1) return true;
-                        });
-                    }
-                },
-                '#module-list input': {
-                    keyup: function (view, e) {
-                        var list = yamvc.ViewManager.get('list'),
-                            combobox = yamvc.ViewManager.get('module-list'),
-                            el = e.target || e.srcElement,
-                            collection = list.getCollection();
+                                if (e.keyCode === 13) {
 
-                        if (e.keyCode === 13) {
+                                    if (!el.value) {
 
-                            if (!el.value) {
+                                        collection.clearFilter('module');
 
-                                collection.clearFilter('module');
+                                    } else {
 
-                            } else {
+                                        el = combobox.queryEl('.hover');
 
-                                el = combobox.queryEl('.hover');
+                                        collection.suspendEvents();
+                                        collection.clearFilter('module');
+                                        collection.resumeEvents();
+                                        collection.filter('module', function (r) {
+                                            if (r.data('module').search(el.innerText) > -1) return true;
+                                        });
+
+                                    }
+                                }
+                            }
+                        },
+                        '#module-list li': {
+                            click: function (view, e) {
+                                var list = yamvc.ViewManager.get('list'),
+                                    el = e.target || e.srcElement,
+                                    collection = list.getCollection();
 
                                 collection.suspendEvents();
                                 collection.clearFilter('module');
@@ -674,38 +641,24 @@
                                 });
 
                             }
+                        },
+                        '.search .modules': {
+                            click: function (view, e) {
+                                var modulesList = yamvc.ViewManager.get('module-list');
+
+                                modulesList.toggle();
+
+                            }
                         }
-                    }
-                },
-                '#module-list li': {
-                    click: function (view, e) {
-                        var list = yamvc.ViewManager.get('list'),
-                            el = e.target || e.srcElement,
-                            collection = list.getCollection();
-
-                        collection.suspendEvents();
-                        collection.clearFilter('module');
-                        collection.resumeEvents();
-                        collection.filter('module', function (r) {
-                            if (r.data('module').search(el.innerText) > -1) return true;
-                        });
-
-                    }
-                },
-                '.search .modules': {
-                    click: function (view, e) {
-                        var modulesList = yamvc.ViewManager.get('module-list');
-
-                        modulesList.toggle();
+                    },
+                    routes: {
 
                     }
                 }
-            },
-            routes: {
-
-            }
+            })
         }
-    });
+    };
 
+    window.ui = ui;
 
 }(window));

@@ -1,26 +1,40 @@
 (function (window, undefined) {
     "use strict";
 
-    var elements = {},// Cache pointers to html elements.
-        measurements = {},// Store measurement results.
+    var measurements = {},// Store measurement results.
         tests = {},// Cache tests.
         startTime = 0,// Using for polifill performance.now
-        currentModule,
-        i = 0;
+        currentModule = 'Default',
+        i = 0,
+        onReadyCallbacks = [],
+        readyStateCheckInterval,
+        measurejs;
 
-    startTime = (new Date()).getTime();
-    window.performance = window.performance || {};
-    window.performance.now = window.performance.now || function () {
-        return (new Date()).getTime() - startTime;
-    };
-
-    function bindElements() {
-        elements.body = document.querySelector('body');
+    //Polyfill for performance now.
+    if (!window.performance) {
+        startTime = (new Date()).getTime();
+        window.performance = window.performance || {};
+        window.performance.now = window.performance.now || function () {
+            return (new Date()).getTime() - startTime;
+        };
     }
 
-    function createElements() {
+
+    function run() {
+        for (var i = 0, l = onReadyCallbacks.length; i < l; i++) {
+            onReadyCallbacks[i]();
+        }
     }
 
+    //
+    if (!readyStateCheckInterval && document.readyState !== "complete") {
+        readyStateCheckInterval = setInterval(function () {
+            if (document.readyState === "complete") {
+                clearInterval(readyStateCheckInterval);
+                run();
+            }
+        }, 10);
+    }
 
     /**
      * @param id
@@ -40,15 +54,19 @@
 
     }
 
-    window.Measure = {
+    measurejs = {
+        ui: false,
         init: function () {
-            bindElements();
-            createElements();
+
+            if (window.ui)
+                this.ui = true;
+
         },
         start: function (id, description) {
 
             // When starting our first measurement we need to prepare object in which we will store all data.
             measurements[id] = measurements[id] || {}; // After that, under it, we create empty object
+            measurements[id].module = currentModule; // After that, under it, we create empty object
             measurements[id].start = measurements[id].start || []; // in which we will store start value
             measurements[id].stop = measurements[id].stop || []; // and stop value for each of measurements.
             measurements[id].loops = measurements[id].loops || 1; // We will also store number of loops which need to run.
@@ -69,15 +87,19 @@
                 stop.push(performance.now()); // Push result when finished.
 
                 if (loops === stop.length) {
+
                     recalculate(id);
+
                 } else if (stop.length < loops) {
 
                     start = function () {
-                        Measure.start(id);
+                        measurejs.start(id);
                     };
+
                     stop = function () {
-                        Measure.stop(id);
+                        measurejs.stop(id);
                     };
+
                     loops = function (loops) {
                     };
 
@@ -97,20 +119,21 @@
         },
         suit: function (id, callback) {
             var start = function () { // Run performance measurement, passed as argument to our suit.
-                    Measure.start(id);
+                    measurejs.start(id);
                 },
                 stop = function () { // Stops performance measurement, passed as argument to our suit.
-                    Measure.stop(id);
+                    measurejs.stop(id);
                 },
                 loops = function (loops) { // Specify number of reps of current test, passed as argument to our suit.
-                    Measure.loops(id, loops);
+                    measurejs.loops(id, loops);
                 };
 
             id = id || 'measure-' + i++; // Before we start, if not passed, we need to create unique id for our test.
 
-            tests[id] = callback; // Cache our tests.
+            tests[id] = callback; // Next we need to save it in object with all tests.
 
-            callback(start, stop, loops); // Start first loop automatically.
+            if (!this.ui) // And if ui is not connected we should run it immediately
+                callback(start, stop, loops); // Start first loop automatically.
 
         },
         getMeasurements: function () {
@@ -123,4 +146,8 @@
             console.log(text);
         }
     };
+
+    onReadyCallbacks.push(measurejs.init);
+
+    window.measurejs = measurejs;
 }(window));
