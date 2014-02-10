@@ -1,11 +1,11 @@
 {
     "name": "measure",
-    "version": "0.1.0",
+    "version": "0.4.0",
     "description": "Measure everything!",
-    "main": "./distrib/measure.js",
+    "main": "./distrib/measure-js.js",
     "repository": {
         "type": "git",
-        "url": "https://github.com/devjseu/measure"
+        "url": "https://github.com/devjseu/measure-js"
     },
     "keywords": [
         "measure",

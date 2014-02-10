@@ -3,10 +3,13 @@
 
     var List, ListElement, Search, ComboBox, ComboBoxElement, Panel, locale, ui;
 
-    if (typeof yamvc === 'undefined')
-        throw new Error("Measure UI require yamvc library");
+    if (typeof window.ya === 'undefined')
+        throw new Error("Measure UI require ya library");
 
-    locale = yamvc.Model.$create({
+    /**
+     * @type {ya.Model}
+     */
+    locale = ya.Model.$create({ // Model with UI labels
         config: {
             namespace: 'locale',
             data: {
@@ -19,9 +22,9 @@
     });
 
     //********** Search definition **********
-    Search = yamvc.View.$extend({
+    Search = ya.View.$extend({
         defaults: {
-            tpl: yamvc.view.Template.$create({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-search',
                     tpl: [
@@ -38,10 +41,10 @@
     //********** Search definition end **********
 
     //********** ComboBox definition **********
-    ComboBox = yamvc.View.$extend({
+    ComboBox = ya.View.$extend({
         defaults: {
             collection: null,
-            tpl: yamvc.view.Template.$create({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-combobox',
                     tpl: [
@@ -70,6 +73,7 @@
             var me = this;
 
             me.addEventListener('render', me.bindDOMEvents);
+            me.getCollection().addEventListener('pushed', me.addListElement.bind(me));
             me.getCollection().addEventListener('afterFilter', me.refreshList.bind(me));
 
         },
@@ -142,6 +146,12 @@
             }
 
         },
+        addListElement: function (r) {
+            var me = this;
+
+            me.prepareComboboxElement(r).appendTo(me, '.list');
+
+        },
         prepareComboboxElements: function () {
             var me = this,
                 collection = me.getCollection(),
@@ -157,8 +167,7 @@
             me.setChildren(children);
         },
         prepareComboboxElement: function (model) {
-            var view;
-            view = new ComboBoxElement({
+            return ComboBoxElement.$create({
                 config: {
                     models: [
                         model,
@@ -166,8 +175,6 @@
                     ]
                 }
             });
-
-            return view;
         },
         refreshList: function () {
             var me = this,
@@ -176,6 +183,9 @@
                 len = children.length,
                 searchFn,
                 child;
+
+            if (!me.isInDOM())
+                return me;
 
             searchFn = function (r) {
 
@@ -197,7 +207,7 @@
             me.clearElements();
             me.markElement();
 
-
+            return me;
         },
         clearElements: function () {
             var me = this,
@@ -233,9 +243,9 @@
     //********** ComboBox definition end **********
 
     //********** ComboBox Element definition **********
-    ComboBoxElement = yamvc.View.$extend({
+    ComboBoxElement = ya.View.$extend({
         defaults: {
-            tpl: yamvc.view.Template.$create({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-combobox-element',
                     tpl: [
@@ -283,16 +293,17 @@
 
             me.getParent().clearElements();
             me.get('el').classList.toggle('hover');
+
         }
     });
     //********** ComboBox definition end **********
 
 
     //********** List definition **********
-    List = yamvc.View.$extend({
+    List = ya.View.$extend({
         defaults: {
             collection: null,
-            tpl: yamvc.view.Template.$create({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-list',
                     tpl: [
@@ -306,6 +317,7 @@
             var me = this,
                 collection = me.getCollection();
 
+            collection.addEventListener('pushed', me.addListElement.bind(me));
             collection.addEventListener('afterFilter', me.refreshList.bind(me));
 
         },
@@ -316,6 +328,12 @@
 
             me.bindEvents();
             me.prepareListElements();
+
+        },
+        addListElement: function (r) {
+            var me = this;
+
+            me.prepareListElement(r).appendTo(me, '.list');
 
         },
         prepareListElements: function () {
@@ -353,6 +371,9 @@
                 searchFn,
                 child;
 
+            if (!me.isInDOM())
+                return me;
+
             searchFn = function (r) {
 
                 if (r.get('clientId') === child.getModel('list').get('clientId')) return true;
@@ -370,22 +391,22 @@
                 }
             }
 
-
+            return me;
         }
     });
     //********** List definition end **********
 
     //********** List Element definition **********
-    ListElement = yamvc.View.$extend({
+    ListElement = ya.View.$extend({
         defaults: {
-            tpl: yamvc.view.Template.$create({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-list-element',
                     tpl: [
                         '<li class="element anim fast">',
                         '<table>',
                         '<tr>',
-                        '<td>{{list.name}}</td>',
+                        '<td>{{list.id}}</td>',
                         '<td>',
                         '<button class="anim fast">{{locale.compare}}</button>',
                         '</td>',
@@ -426,14 +447,14 @@
     //********** List Element definition end **********
 
     //********** Panel definition **********
-    Panel = yamvc.View.$extend({
+    Panel = ya.View.$extend({
         defaults: {
             fit: true,
             topBar: false,
             bottomBar: false,
             width: '100%',
             height: '100%',
-            tpl: new yamvc.view.Template({
+            tpl: ya.view.Template.$create({
                 config: {
                     id: 'tpl-search',
                     tpl: [
@@ -518,120 +539,101 @@
     });
     //********** Panel definition end **********
 
-
-
-    ui = {
-        views: {
-            panel: Panel.$create({
-                config: {
-                    autoCreate: true,
-                    topBar: true,
-                    bottomBar: true,
-                    id: 'left-panel',
-                    width: '30%',
-                    renderTo: 'body',
-                    children: [
-                        Search.$create({
+    //**********   Panel instance   **********
+    Panel.$create({
+        config: {
+            autoCreate: true,
+            topBar: true,
+            bottomBar: true,
+            id: 'left-panel',
+            width: '30%',
+            renderTo: 'body',
+            children: [
+                Search.$create({
+                    config: {
+                        id: 'search',
+                        renderTo: '.bar.top',
+                        models: [
+                            locale
+                        ]
+                    }
+                }),
+                ComboBox.$create({
+                    config: {
+                        hidden: true,
+                        id: 'module-list',
+                        renderTo: '.bar.top',
+                        models: [
+                            locale
+                        ],
+                        collection: ya.Collection.$create({
                             config: {
-                                id: 'search',
-                                renderTo: '.bar.top',
-                                models: [
-                                    locale
-                                ]
-                            }
-                        }),
-                        ComboBox.$create({
-                            config: {
-                                hidden: true,
-                                id: 'module-list',
-                                renderTo: '.bar.top',
-                                models: [
-                                    locale
-                                ],
-                                collection: yamvc.Collection.$create({
-                                    config: {
-                                        namespace: 'combobox',
-                                        model: yamvc.Model
-                                    }
-                                })
-                            }
-                        }),
-                        List.$create({
-                            config: {
-                                id: 'list',
-                                renderTo: '.content',
-                                collection: yamvc.Collection.$create({
-                                    config: {
-                                        namespace: 'list',
-                                        model: yamvc.Model
-                                    }
-                                })
+                                namespace: 'combobox',
+                                model: ya.Model
                             }
                         })
-                    ]
-                }
-            })
-        },
-        controllers: {
-            main: yamvc.Controller.$create({
-                config: {
-                    name: 'Main',
-                    views: {
-                        panel: yamvc.ViewManager.get('left-panel')
-                    },
-                    events: {
-                        '.list .element button': {
-                            click: function () {
-                                alert('Compare!');
+                    }
+                }),
+                List.$create({
+                    config: {
+                        id: 'list',
+                        renderTo: '.content',
+                        collection: ya.Collection.$create({
+                            config: {
+                                namespace: 'list',
+                                model: ya.Model
                             }
-                        },
-                        '.search input': {
-                            keyup: function (view, e) {
-                                var list = yamvc.ViewManager.get('list'),
-                                    el = e.target || e.srcElement,
-                                    collection = list.getCollection();
+                        })
+                    }
+                })
+            ]
+        }
+    });
+    //********** Panel instance end **********
 
-                                collection.suspendEvents();
-                                collection.clearFilter('name');
-                                collection.resumeEvents();
-                                collection.filter('name', function (r) {
-                                    if (r.data('name').search(el.value) > -1) return true;
-                                });
-                            }
-                        },
-                        '#module-list input': {
-                            keyup: function (view, e) {
-                                var list = yamvc.ViewManager.get('list'),
-                                    combobox = yamvc.ViewManager.get('module-list'),
-                                    el = e.target || e.srcElement,
-                                    collection = list.getCollection();
+    //**********   Controller instance   **********
+    ya.Controller.$create({
+        config: {
+            name: 'Main',
+            views: {
+                panel: ya.viewManager.get('left-panel')
+            },
+            events: {
+                '.list .element button': {
+                    click: function () {
+                        alert('Compare!');
+                    }
+                },
+                '.search input': {
+                    keyup: function (view, e) {
+                        var list = ya.viewManager.get('list'),
+                            el = e.target || e.srcElement,
+                            collection = list.getCollection();
 
-                                if (e.keyCode === 13) {
+                        collection.suspendEvents();
+                        collection.clearFilter('id');
+                        collection.resumeEvents();
+                        collection.filter('id', function (r) {
+                            if (r.data('id').search(el.value) > -1) return true;
+                        });
+                    }
+                },
+                '#module-list input': {
+                    keyup: function (view, e) {
+                        var list = ya.viewManager.get('list'),
+                            combobox = ya.viewManager.get('module-list'),
+                            el = e.target || e.srcElement,
+                            collection = list.getCollection();
 
-                                    if (!el.value) {
+                        if (e.keyCode === 13) {
 
-                                        collection.clearFilter('module');
+                            if (!el.value) {
 
-                                    } else {
+                                collection.clearFilter('module');
 
-                                        el = combobox.queryEl('.hover');
+                            } else {
 
-                                        collection.suspendEvents();
-                                        collection.clearFilter('module');
-                                        collection.resumeEvents();
-                                        collection.filter('module', function (r) {
-                                            if (r.data('module').search(el.innerText) > -1) return true;
-                                        });
-
-                                    }
-                                }
-                            }
-                        },
-                        '#module-list li': {
-                            click: function (view, e) {
-                                var list = yamvc.ViewManager.get('list'),
-                                    el = e.target || e.srcElement,
-                                    collection = list.getCollection();
+                                el = combobox.queryEl('.hover');
 
                                 collection.suspendEvents();
                                 collection.clearFilter('module');
@@ -641,21 +643,71 @@
                                 });
 
                             }
-                        },
-                        '.search .modules': {
-                            click: function (view, e) {
-                                var modulesList = yamvc.ViewManager.get('module-list');
-
-                                modulesList.toggle();
-
-                            }
                         }
-                    },
-                    routes: {
+                    }
+                },
+                '#module-list li': {
+                    click: function (view, e) {
+                        var list = ya.viewManager.get('list'),
+                            el = e.target || e.srcElement,
+                            collection = list.getCollection();
+
+                        collection.suspendEvents();
+                        collection.clearFilter('module');
+                        collection.resumeEvents();
+                        collection.filter('module', function (r) {
+                            if (r.data('module').search(el.innerText) > -1) return true;
+                        });
+
+                    }
+                },
+                '.search .modules': {
+                    click: function (view, e) {
+                        var modulesList = ya.viewManager.get('module-list');
+
+                        modulesList.toggle();
 
                     }
                 }
-            })
+            },
+            routes: {
+
+            }
+        }
+    });
+    //********** Controller instance end **********
+
+    /**
+     * @type {{add: Function}}
+     */
+    ui = {
+        /**
+         * @param test
+         * @return ui
+         */
+        // Add function allow us to add another test suit to UI.
+        add: function (test) {
+            var modules = ya.viewManager.get('module-list').getCollection(),
+                list = ya.viewManager.get('list').getCollection(),
+                findFn;
+
+            // But before we do that we need to check if module for suit already exist. If not
+            // we need to add it firstly.
+            findFn = function (r) {
+
+                if (test.module === r.data('module')) return true;
+
+            };
+
+            if (modules.findOneBy(findFn) < 0) {
+
+                modules.push(test);
+
+            }
+
+            list.push(test);
+
+            return this;
         }
     };
 
