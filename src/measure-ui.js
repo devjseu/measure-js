@@ -148,8 +148,9 @@
         },
         addListElement: function (r) {
             var me = this;
-
-            me.prepareComboboxElement(r).appendTo(me, '.list');
+            me
+                .prepareComboboxElement(r)
+                .appendTo(me, '.list');
 
         },
         prepareComboboxElements: function () {
@@ -332,7 +333,6 @@
         },
         addListElement: function (r) {
             var me = this;
-
             me.prepareListElement(r).appendTo(me, '.list');
 
         },
@@ -595,16 +595,13 @@
     ya.Controller.$create({
         config: {
             name: 'Main',
-            views: {
-                panel: ya.viewManager.get('left-panel')
-            },
             events: {
-                '.list .element button': {
+                '$left-panel .list .element button': {
                     click: function () {
                         alert('Compare!');
                     }
                 },
-                '.search input': {
+                '$left-panel .search input': {
                     keyup: function (view, e) {
                         var list = ya.viewManager.get('list'),
                             el = e.target || e.srcElement,
@@ -618,7 +615,7 @@
                         });
                     }
                 },
-                '#module-list input': {
+                '$left-panel #module-list input': {
                     keyup: function (view, e) {
                         var list = ya.viewManager.get('list'),
                             combobox = ya.viewManager.get('module-list'),
@@ -646,7 +643,7 @@
                         }
                     }
                 },
-                '#module-list li': {
+                '$left-panel #module-list li': {
                     click: function (view, e) {
                         var list = ya.viewManager.get('list'),
                             el = e.target || e.srcElement,
@@ -661,7 +658,7 @@
 
                     }
                 },
-                '.search .modules': {
+                '$left-panel .search .modules': {
                     click: function (view, e) {
                         var modulesList = ya.viewManager.get('module-list');
 
@@ -669,9 +666,6 @@
 
                     }
                 }
-            },
-            routes: {
-
             }
         }
     });

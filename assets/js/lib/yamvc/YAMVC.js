@@ -1,5 +1,110 @@
-/*! YAMVC v0.1.13 - 2014-02-08 
+/*! YAMVC v0.1.13 - 2014-02-19 
  *  License:  */
+(function (window, undefined) {
+    "use strict";
+    var ya = window.ya || {},
+        mixins = ya.mixins || {},
+        YArray;
+
+    YArray = {
+        /**
+         *
+         * @param key
+         * @returns {Number}
+         */
+        find: function (key /*[, value]*/) {
+            var len = this.length,
+                argsLen = arguments.length,
+                val = argsLen > 1 ? arguments[1] : null,
+                rec;
+
+            while (len--) {
+
+                rec = this[len];
+                if (argsLen > 1) {
+
+                    if (rec[key] === val) {
+                        break;
+                    }
+
+                } else if (rec === key) {
+                    break;
+                }
+            }
+
+            return len;
+        },
+        /**
+         *
+         * @param key
+         * @returns {Array}
+         */
+        findAll: function (key /*[, value]*/) {
+            var len = this.length,
+                argsLen = arguments.length,
+                val = argsLen > 1 ? arguments[1] : null,
+                result = [],
+                rec;
+
+            while (len--) {
+
+                rec = this[len];
+                if (argsLen > 1) {
+
+                    if (rec[key] === val) {
+                        result.push(len);
+                    }
+
+                } else if (rec === key) {
+                    result.push(len);
+                }
+            }
+
+            return result;
+        },
+        /**
+         *
+         * @param {Function} fn
+         * @returns {Array}
+         */
+        findAllByFn: function (fn) {
+            var len = this.length,
+                result = [];
+
+            while (len--) {
+
+                if (fn(this[len])) {
+
+                    result.push(len);
+
+                }
+
+            }
+
+            return result;
+        },
+        each: Array.prototype.forEach || function (fun /*, thisArg */) {
+
+            if (this === void 0 || this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof fun !== "function")
+                throw new TypeError();
+
+            var thisArg = arguments.length >= 2 ? arguments[1] : void 0;
+            for (var i = 0; i < len; i++) {
+                if (i in t)
+                    fun.call(thisArg, t[i], i, t);
+            }
+        }
+    };
+
+    mixins.Array = YArray;
+    window.ya = ya;
+    window.ya.mixins = mixins;
+}(window));
 (function (window, undefined) {
     "use strict";
     var ya = window.ya || {},
@@ -494,7 +599,6 @@
             while (records.length) {
 
                 record = records.pop();
-
                 record = new ModelDefinition(
                     {
                         config: {
@@ -1035,8 +1139,8 @@
          * @param id
          * @param view
          */
-        add: function (id, view) {
-            this.controller.push(view);
+        add: function (id, controller) {
+            this.controller.push(controller);
             this.i++;
         },
         // Get view by its id
@@ -1080,7 +1184,6 @@
             CM.add(id, me);
 
             ya.$onReady(function () {
-                me.renderViews();
                 me.restoreRouter();
             });
 
@@ -1091,10 +1194,9 @@
             var me = this,
                 routes = me.get('routes'),
                 events = me.get('events'),
-                views = me.get('views'),
-                query,
-                rx = /(^\$|,$)/,
-                view;
+                views = [],
+                rx = new RegExp('\\$([^\\s]+)'),
+                matches, view, l, obj;
 
             if (routes) {
                 for (var k in routes) {
@@ -1105,94 +1207,106 @@
                 }
             }
 
-            if (events && views) {
-                for (view in views) {
+            if (events) {
 
-                    if (views.hasOwnProperty(view)) {
+                for (var e in events) {
 
-                        views[view].addEventListener('render', me.resolveEvents.bind(me));
+                    if (events.hasOwnProperty(e)) {
+
+                        obj = {};
+                        obj[e] = events[e];
+                        ya.event.dispatcher.add(me, obj);
+
+                        matches = e.match(rx);
+                        if (matches) {
+
+                            if (views.indexOf(matches[1]) < 0) {
+
+                                views.push(matches[1]);
+
+                            }
+
+                        } else {
+
+                            throw new Error('Event query should begin from id of the view (current query: ' + e + ')');
+
+                        }
 
                     }
 
                 }
 
-                for (query in events) {
+                l = views.length;
+                while (l--) {
 
-                    if (events.hasOwnProperty(query)) {
+                    view = ya
+                        .viewManager
+                        .get(views[l]);
+                    if (view) {
 
-                        if (rx.test(query)) {
+                        if (view.isInDOM()) {
 
-                            view = views[query.substr(1)];
+                            me.resolveEvents(view);
 
-                            if (view) {
+                        } else {
 
-                                for (var event in events[query]) {
+                            view.addEventListener('render', me.resolveEvents.bind(me));
 
-                                    if (events[query].hasOwnProperty(event)) {
-                                        view.addEventListener(event, events[query][event].bind(me, view));
-                                    }
-
-                                }
-
-                            }
-
-                            delete events[query];
                         }
-                    }
 
+                    }
                 }
 
             }
             return this;
         },
-        renderViews: function () {
-            var me = this,
-                views = me.get('views');
-
-            for (var view in views) {
-
-                if (views.hasOwnProperty(view)) {
-
-                    if (views[view].getAutoCreate && views[view].getAutoCreate()) {
-
-                        views[view].render();
-
-                    }
-                }
-
-            }
-
-        },
         resolveEvents: function (view) {
             var events = this.get('events'),
-                viewEvents,
                 newScope = function (func, scope, arg) {
                     return func.bind(scope, arg);
                 },
+                rx = new RegExp('\\$([^\\s]+)'),
+                matches,
+                viewEvents,
                 elements,
+                selector,
                 scope;
 
             for (var query in events) {
 
                 if (events.hasOwnProperty(query)) {
 
-                    viewEvents = events[query];
-                    elements = view.get('el').querySelectorAll(query);
-                    for (var i = 0, l = elements.length; i < l; i++) {
+                    matches = query.match(rx);
+                    if (matches && matches[1] === view.getId()) {
+                        viewEvents = events[query];
+                        selector = query.split(" ").slice(1);
+                        if (selector.length) {
 
-                        for (var event in viewEvents) {
+                            elements = view.get('el').querySelectorAll(selector.join(" "));
 
-                            if (viewEvents.hasOwnProperty(event)) {
+                        } else {
 
-                                scope = newScope(viewEvents[event], this, view);
+                            elements = [view.get('el')];
 
-                                elements[i].addEventListener(event, scope);
+                        }
+
+                        for (var i = 0, l = elements.length; i < l; i++) {
+
+                            for (var event in viewEvents) {
+
+                                if (viewEvents.hasOwnProperty(event)) {
+
+                                    scope = newScope(viewEvents[event], this, view);
+
+                                    elements[i].addEventListener(event, scope);
+
+                                }
 
                             }
 
                         }
-
                     }
+
 
                 }
 
@@ -1247,11 +1361,11 @@
 
             me.initConfig();
         },
-        setData: function (data) {
+        setData : function (data) {
             this.set('data', data);
             return this;
         },
-        getData: function () {
+        getData : function () {
             return this._data;
         },
         setOptions: function (opts) {
@@ -1754,7 +1868,7 @@
                             while (l2--) {
                                 if (records[l2].id === id) {
                                     records[l2] = data[l];
-                                    result.splice(0, 0, data[l]);
+                                    result.splice(0,0, data[l]);
                                 }
                             }
                         }
@@ -1898,6 +2012,234 @@
     window.ya.data = window.ya.data || {};
     window.ya.data.proxy = window.ya.data.proxy || {};
     window.ya.data.proxy.Localstorage = Localstorage;
+}(window));
+
+(function (window, undefined) {
+    "use strict";
+    var ya = window.ya || {},
+        __findAllByFn = ya.mixins.Array.findAllByFn,
+        __each = ya.mixins.Array.each,
+        Dispatcher;
+
+    function isQueryMatch(el, selector) {
+        var match = true, tag, id, classes;
+
+        if (selector.search(" ") === -1) {
+
+            tag = selector.match(/^[^\.#]+/gi);
+            id = selector.match(/#[^\.#]+/gi);
+            classes = selector.match(/\.[^\.#]+/gi);
+
+            if (tag && el.nodeName.toLowerCase() !== tag.pop()) {
+
+                match = false;
+
+            }
+
+            if (classes) {
+                while (classes.length) {
+
+                    if (!el.classList.contains(classes.pop().substring(1))) {
+                        match = false;
+                        break;
+                    }
+
+                }
+            }
+
+            if (id && el.getAttribute('id') !== id.pop().substring(1)) {
+
+                match = false;
+
+            }
+
+        } else {
+
+            match = false;
+
+        }
+
+        return match;
+    }
+
+    /**
+     * @type {Dispatcher}
+     */
+    Dispatcher = ya.Core.$extend({
+        defaults: {
+            delegates: null
+        },
+        /**
+         * @param opts
+         * @returns {Dispatcher}
+         */
+        init: function (opts) {
+            // Standard way of initialization.
+            var me = this, config;
+
+            Dispatcher.Parent.init.apply(this, arguments);
+
+            opts = opts || {};
+            config = ya.$merge(me._config, opts.config);
+
+            me.set('initOpts', opts);
+            me.set('config', config);
+
+            me.initConfig();
+
+            return me;
+        },
+        initConfig: function () {
+            var me = this;
+
+            // After calling parent method
+            Dispatcher.Parent.initConfig.apply(this, arguments);
+
+            // set defaults.
+            me.setDelegates([]);
+
+            return me;
+        },
+        /**
+         * @param scope
+         * @param e
+         * @returns {Dispatcher}
+         */
+        add: function (scope, e) {
+            var me = this,
+                selector = Object.keys(e).pop();
+
+            me.getDelegates().push({
+                selector: selector,
+                scope: scope,
+                events: e[selector]
+            });
+
+            return me;
+        },
+        /**
+         * @param view
+         */
+        apply: function (view) {
+            // Apply delegated events.
+            var me = this,
+            // Get all delegated events.
+                delegates = me.getDelegates(),
+            // Define array in which matched events from delegation array
+            // will be stored.
+                matchPos = [],
+            // Cache new view in other variable.
+                newView = view,
+            // Define array for elements which match to last part
+            // of query from delegated event object
+                els = [],
+            // Function which will be used to match if there are any
+            // delegated events for particular view.
+                matchIdFn = function (r) {
+                    return r.selector.search(regExp) >= 0;
+
+                },
+            // Other variables which need to be defined.
+                selector, delegate, regExp, cpSelector, e;
+
+
+            while (view) {
+                // If view is not null define regexp for
+                // searching view id in delegated event
+                // query.
+                regExp = new RegExp('^\\$' + view.getId() + "[\\s]");
+                // Get position for events which were matched.
+                matchPos = __findAllByFn.call(delegates, matchIdFn);
+                if (matchPos.length) {
+                    /*jshint -W083 */
+                    // If we found any events which need to be delegated,
+                    __each.call(matchPos, function (r) {
+                        // iterate through all of them.
+                        // As first step clear the array of elements
+                        els.length = 0;
+                        delegate = delegates[r];
+                        //
+                        selector = delegate
+                            .selector
+                            .split(" ");
+                        // Remove item id from selectors array.
+                        selector.shift();
+
+                        if (selector.length) {
+                            // If still anything left get last part
+                            // from query and find in new view elements
+                            // which match to the selector.
+                            els = newView.queryEls(selector.pop());
+                            // Copy array with rest of them
+                            cpSelector = selector.slice();
+                            __each.call(els, function (el) {
+                                // and iterate through all founded elements.
+                                if (cpSelector.length) {
+
+                                    var node = el,
+                                        lastSelector = cpSelector.pop();
+                                    while (view.getId() !== node.getAttribute('id')) {
+
+                                        if (isQueryMatch(node, lastSelector)) {
+
+                                            if (cpSelector.length === 0) {
+
+                                                me.assignEvents(el, delegate, view);
+
+                                                break;
+                                            }
+                                            lastSelector = cpSelector.pop();
+
+                                        }
+                                        node = node.parentNode;
+
+                                    }
+
+                                } else {
+
+                                    me.assignEvents(el, delegate, view);
+
+                                }
+
+                            });
+
+                        }
+
+                    });
+
+                }
+
+                view = view.getParent();
+
+
+            }
+
+
+        },
+        assignEvents: function (el, delegate, view) {
+            var e = delegate.events,
+                eType;
+            for (eType in e) {
+                if (e.hasOwnProperty(eType)) {
+
+                    el.addEventListener(eType, e[eType].bind(delegate.scope, view), false);
+
+                }
+            }
+        },
+        /**
+         * Clear delegates array
+         * @returns {Dispatcher}
+         */
+        clear: function () {
+            this.getDelegates().length = 0;
+            return this;
+        }
+    });
+
+    window.ya = ya;
+    window.ya.event = window.ya.event || {};
+    window.ya.event.dispatcher = Dispatcher.$create();
 }(window));
 
 (function (window, undefined) {
@@ -2709,6 +3051,7 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
 
     var ya = window.ya || {},
         style = document.createElement('style'),
+        __slice = Array.prototype.slice,
         VM,
         VTM,
         View,
@@ -2782,6 +3125,7 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
         // use `get` method (with id as argument) to return requested view.
     VM = {
         views: [],
+        toRender: [],
         i: 0,
         // Add view to manager
         /**
@@ -2789,6 +3133,13 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
          * @param view
          */
         add: function (id, view) {
+
+            if (view.getAutoCreate()) {
+
+                view.render();
+
+            }
+
             this.views.push(view);
             this.i++;
         },
@@ -2824,6 +3175,7 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
             return this.tpl[id];
         }
     };
+
     /**
      * @constructor
      * @params opts Object with configuration properties
@@ -2839,7 +3191,8 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
             parent: null,
             fit: false,
             hidden: false,
-            models: null
+            models: null,
+            autoCreate: false
         },
         // Initializing function in which we call parent method, merge previous
         // configuration with new one, set id of component, initialize config
@@ -2850,35 +3203,29 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
          * @returns {View}
          */
         init: function (opts) {
+            var me = this;
 
-            ya.Core.prototype.init.apply(this);
+            ya.Core.prototype.init.apply(me);
 
-            var me = this, config, id;
+            me.initDefaults(opts);
+            me.initConfig();
+            me.initTemplate();
+            me.initParent();
+            VM.add(me.getId(), me);
+
+            return me;
+        },
+        initDefaults: function (opts) {
+            var me = this, config;
 
             opts = opts || {};
             config = ya.$merge(me._config, opts.config);
-            config.id = id = config.id || 'view-' + VM.i;
+            config.id = config.id || 'view-' + VM.i;
             config.children = config.children || [];
 
             me.set('initOpts', opts);
             me.set('config', config);
 
-            me.initConfig();
-            VM.add(id, me);
-
-            return me;
-        },
-        /**
-         * @returns {View}
-         */
-        initConfig: function () {
-
-            ya.Core.prototype.initConfig.apply(this);
-
-            this.initTemplate();
-            this.initModels();
-
-            return this;
         },
         /**
          * @returns {View}
@@ -2919,13 +3266,16 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
 
             return me;
         },
-        /**
-         * @returns {View}
-         */
-        initModels: function () {
-            var me = this;
+        initParent: function () {
+            var me = this,
+                parent = me.getParent();
 
-            return me;
+            if (parent) {
+
+                parent.getChildren().push(me);
+
+            }
+
         },
         /**
          * @returns {View}
@@ -2962,7 +3312,6 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
         },
         /**
          * @version 0.1.11
-         * @param {Boolean} force
          * @returns {Node}
          */
         render: function () {
@@ -3135,13 +3484,10 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
                                 if (attr.nodeName === 'css') {
 
                                     value = attr.value;
-
                                     attr = document.createAttribute("style");
-
                                     attr.value = value;
 
                                     node.removeAttribute('css');
-
                                     attrs.setNamedItem(attr);
 
                                 }
@@ -3162,13 +3508,10 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
                             if (attr.nodeName === 'css') {
 
                                 value = attr.value;
-
                                 attr = document.createAttribute("style");
-
                                 attr.value = value;
 
                                 node.removeAttribute('css');
-
                                 attrs.setNamedItem(attr);
 
                             }
@@ -3411,17 +3754,70 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
         },
         /**
          * @param selector
-         * @returns {Node}
          */
-        queryEl: function (selector) {
-            return this.get('el').querySelector(selector);
+        isQueryMatch: function (selector) {
+            var el = this._el, match = true, tag, id, classes;
+
+            if (selector.search(" ") === -1) {
+
+                tag = selector.match(/^[^\.#]+/gi);
+                id = selector.match(/#[^\.#]+/gi);
+                classes = selector.match(/\.[^\.#]+/gi);
+
+                if (tag && el.nodeName.toLowerCase() !== tag.pop()) {
+
+                    match = false;
+
+                }
+
+                if (classes) {
+                    while (classes.length) {
+
+                        if (!el.classList.contains(classes.pop().substring(1))) {
+                            match = false;
+                            break;
+                        }
+
+                    }
+                }
+
+                if (id && el.getAttribute('id') !== id.pop().substring(1)) {
+
+                    match = false;
+
+                }
+
+            } else {
+
+                match = false;
+
+            }
+
+            return match;
+
         },
         /**
          * @param selector
-         * @returns {NodeList}
+         * @returns {Node}
+         */
+        queryEl: function (selector) {
+            return this.get('el').querySelector(selector) ||
+                (this.isQueryMatch(selector) ? this.get('el') : null);
+        },
+        /**
+         * @param selector
+         * @returns {Array}
          */
         queryEls: function (selector) {
-            return this.get('el').querySelectorAll(selector);
+            var results = __slice.call(this.get('el').querySelectorAll(selector) || [], 0);
+
+            if (this.isQueryMatch(selector)) {
+
+                results.push(this.get('el'));
+
+            }
+
+            return results;
         },
         /**
          * @param view
@@ -3519,7 +3915,7 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
                 id = me.getId(),
                 views = parent.getChildren(),
                 oldParent = config.parent,
-                parentEl;
+                parentEl = selector ? parent._el.querySelector(selector) : parent._el;
 
             if (selector) {
 
@@ -3557,10 +3953,9 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
                 if (!me._el) {
 
                     me.render();
+                    ya.event.dispatcher.apply(me);
 
                 } else {
-
-                    parentEl = selector ? parent._el.querySelector(selector) : parent._el;
 
                     parentEl.appendChild(me._el);
                     me.set('isInDOM', true);
@@ -3653,6 +4048,9 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
         Template;
 
     Template = ya.Core.$extend({
+        defaults : {
+            tpl : null
+        },
         init: function (opts) {
             var me = this, config;
 
@@ -3692,7 +4090,7 @@ if ("document" in self && !("classList" in document.createElement("_"))) {
 
             me.set('html', tpl);
         },
-        getHtml: function () {
+        getHtml : function () {
             return this._html;
         }
     });
